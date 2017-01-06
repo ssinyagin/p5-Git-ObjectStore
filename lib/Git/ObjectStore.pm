@@ -1,13 +1,66 @@
+package Git::ObjectStore;
+
 use strict;
 use warnings;
+
+use Git::Raw;
 use Carp;
 use File::Spec::Functions qw(catfile);
 
-package Git::ObjectStore;
 
 # ABSTRACT: abstraction layer for Git::Raw and libgit2
 
 =head1 SYNOPSIS
+
+  use Git::ObjectStore;
+
+  ### Writer example ###
+  my $store = new Git::ObjectStore('repodir' => $dir,
+                                   'branchname' => $bname,
+                                   'writer' => 1);
+
+  # write the documents into the store
+  my $is_changed = $store->write_file('docs/001a', \$doc1text);
+  $store->write_file_nocheck('docs/001b', \$doc2text);
+
+  # documents can be read from the writer object
+  my $doc = $store->read_file('docs/001c');
+
+  # check if a document exists and delete it
+  if( $store->file_exists('docs/001d') ) {
+      $store->delete_file('docs/001d');
+  }
+
+  # once the changes are finished, create commit and write it to disk
+  $store->create_commit_and_packfile();
+
+  ### Reader example ###
+  my $store = new Git::ObjectStore('repodir' => $dir,
+                                   'branchname' => $bname);
+
+  # checking existance or reading individual files
+  $store->file_exists('docs/001d') and print "file exists\n";
+  my $doc = $store->read_file('docs/001c');
+
+  # read all files in a directory and its subdirectories
+  my $cb_read = sub {
+      my ($path, $data) = @_;
+      print("$path: $data\n");
+  };
+  $store->recursive_read('docs', $cb_read);
+
+  # Check if there are changes and read the updates
+  my $cb_updated = sub {
+      my ($path, $data) = @_;
+      print("Updated $path: $data\n");
+  };
+  my $cb_deleted = sub {
+      my ($path) = @_;
+      print("Deleted $path\n");
+  };
+  if( $store->current_commit_id() ne $old_commit_id ) {
+      $store->read_updates($old_commit_id, $cb_updated, $cb_deleted);
+  }
 
 =head1 DESCRIPTION
 
@@ -70,7 +123,7 @@ sub new
         }
     }
 
-    if ( $self->{'writer'} and $arg{'goto'} ) {
+    if ( $self->{'writer'} and $args{'goto'} ) {
         croak('Cannot use goto in writer mode');
     }
 
@@ -124,10 +177,10 @@ sub new
     } else {
         # open the repo for read-only access
         my $commit;
-        if ( defined($arg{'goto'}) ) {
+        if ( defined($args{'goto'}) ) {
             # read from a specified commit
-            $commit = Git::Raw::Commit->lookup($repo, $arg{'goto'});
-            croak('Cannot lookup commit ' . $arg{'goto'})
+            $commit = Git::Raw::Commit->lookup($repo, $args{'goto'});
+            croak('Cannot lookup commit ' . $args{'goto'})
                 unless defined($commit);
         } else {
             # read from the top of the branch
@@ -270,6 +323,25 @@ sub write_file_nocheck
 }
 
 
+=method delete_file($path)
+
+This method deletes a file from the branch. It throws an error if the
+file does not exist in the branch.
+
+=cut
+
+sub delete_file
+{
+    my $self = shift;
+    my $path = shift;
+
+    croak('delete_file() is called for a read-only ObjectStore object')
+        unless $self->{'writer'};
+    $self->{'gitindex'}->remove($path);
+    return;
+}
+
+
 =method create_commit([$msg])
 
 This method checks if any new content is written, and creates a Git
@@ -374,7 +446,8 @@ sub create_commit_and_packfile
 
 This method is only supported in reader mode. It reads the directories
 recursively and calls the callback for every file it finds. The callback
-arguments are the file name and scalar content.
+arguments are the file name and scalar content. If called with string as
+path, all files in the branch are traversed.
 
 =cut
 
@@ -387,9 +460,20 @@ sub recursive_read
     croak('recursive_read() is called for a read-write ObjectStore object')
         if $self->{'writer'};
 
-    my $entry = $self->{'gittree'}->entry_bypath($path);
-    if( defined($entry) ) {
-        $self->_do_recursive_read($entry, $path, $callback);
+    if( $path eq '' )
+    {
+        foreach my $entry ($self->{'gittree'}->entries()) {
+            $self->_do_recursive_read($entry, $entry->name(), $callback);
+        }
+    } else {
+        my $entry = $self->{'gittree'}->entry_bypath($path);
+        if( defined($entry) ) {
+            $self->_do_recursive_read($entry, $path, $callback);
+        }
+        else
+        {
+            croak("No such path in the branch: $path");
+        }
     }
     return;
 }
