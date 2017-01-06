@@ -434,13 +434,13 @@ sub read_updates
     my $old_commit_id = shift;
     my $cb_updated = shift;
     my $cb_deleted = shift;
-    
+
     my $old_commit = Git::Raw::Commit->lookup($self->{'repo'}, $old_commit_id);
     croak("Cannot lookup commit $old_commit_id") unless defined($old_commit);
     my $old_tree = $old_commit->tree();
 
     my $new_tree = $self->{'gittree'};
-    
+
     my $diff = $old_tree->diff
         (
          {
@@ -450,18 +450,15 @@ sub read_updates
                      },
          }
         );
-    
+
     my @deltas = $diff->deltas();
-    foreach my $delta (@deltas)
-    {
+    foreach my $delta (@deltas) {
+
         my $path = $delta->new_file()->path();
-        
-        if( $delta->status() eq 'deleted')
-        {
+
+        if( $delta->status() eq 'deleted') {
             &{$cb_deleted}($path);
-        }
-        else
-        {
+        } else {
             my $entry = $new_tree->entry_bypath($path);
             &{$cb_updated}($path, $entry->object()->content());
         }
@@ -471,10 +468,10 @@ sub read_updates
 }
 
 
-    
 
 
-    
+
+
 
 1;
 
