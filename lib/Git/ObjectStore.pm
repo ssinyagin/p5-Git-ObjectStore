@@ -206,6 +206,39 @@ sub _signature
 }
 
 
+=method created_init_commit()
+
+If a C<Git::ObjectStore> object is created in writer mode and the branch
+did not exist, the C<new()> method creates an empty initial commit in
+this branch. This method returns the initial commit ID, or undef if the
+branch already existed.
+
+=cut
+
+sub created_init_commit
+{
+    my $self = shift;
+    return $self->{'created_init_commit'};
+}
+
+
+
+=method repo()
+
+This method returns a L<Git::Raw::Repository> object associated with
+this store object.
+
+=cut
+
+sub repo
+{
+    my $self = shift;
+    return $self->{'repo'};
+}
+
+
+
+
 =method read_file($path)
 
 This method reads a file from a given path within the branch. It returns
