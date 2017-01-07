@@ -68,7 +68,7 @@ This module provides an abstraction level on top of L<Git::Raw>, a Perl
 wrapper for F<libgit2>, in order to use a bare Git repository as an
 object store. The objects are written into a mempack, and then flushed
 to disk, so thousands of objects can be created without polluting your
-filesystem and exxhausting its inode pool.
+filesystem and exhausting its inode pool.
 
 =cut
 
