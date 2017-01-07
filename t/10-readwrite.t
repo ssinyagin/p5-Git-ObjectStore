@@ -94,7 +94,7 @@ my %more_data2 =
      'zzz/zzz1' => 'ZZZZZZ',
     );
 while(my ($file, $data) = each %more_data2 ) {
-    $writer->write_file($file, $data);
+    $writer->write_file_nocheck($file, $data);
 }
 ok(1, 'wrote more data');
 
@@ -106,6 +106,8 @@ ok(1, 'deleted 2 files');
 $changed = $writer->create_commit_and_packfile();
 ok($changed, 'create_commit_and_packfile returns true');
 
+ok($writer->current_commit_id() ne $old_commit_id,
+   'Writer current_commit_id returns a new commit');
 
 $reader = new Git::ObjectStore('repodir' => $tmpdirname,
                                'branchname' => 'test1');
@@ -113,6 +115,8 @@ ok(ref($reader), 'created a reader Git::ObjectStore');
 
 ok($reader->current_commit_id() ne $old_commit_id,
    'Reader current_commit_id returns a new commit');
+
+ok($writer->file_exists('docs/001c'), 'file_exists returns true');
 
 my %read2;
 my $cb_read2 = sub {
