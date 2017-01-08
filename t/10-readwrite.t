@@ -24,10 +24,10 @@ ok(! defined($doc), 'read nonexistent file');
 
 ok(! $writer->file_exists('docs/001c'), 'file_exists returns false');
 
-my $changed = $writer->write_file('docs/001c', 'data1');
+my $changed = $writer->write_and_check('docs/001c', 'data1');
 ok($changed, 'write_file returns true');
 
-$changed = $writer->write_file('docs/001c', 'data1');
+$changed = $writer->write_and_check('docs/001c', 'data1');
 ok(! $changed, 'write_file returns false');
 
 $doc = $writer->read_file('docs/001c');
@@ -94,7 +94,7 @@ my %more_data2 =
      'zzz/zzz1' => 'ZZZZZZ',
     );
 while(my ($file, $data) = each %more_data2 ) {
-    $writer->write_file_nocheck($file, $data);
+    $writer->write_file($file, $data);
 }
 ok(1, 'wrote more data');
 

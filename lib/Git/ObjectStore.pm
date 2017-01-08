@@ -20,8 +20,8 @@ use File::Spec::Functions qw(catfile);
                                    'writer' => 1);
 
   # write the documents into the store
-  my $is_changed = $store->write_file('docs/001a', \$doc1text);
-  $store->write_file_nocheck('docs/001b', \$doc2text);
+  my $is_changed = $store->write_and_check('docs/001a', \$doc1text);
+  $store->write_file('docs/001b', \$doc2text);
 
   # documents can be read from the writer object
   my $doc = $store->read_file('docs/001c');
@@ -303,7 +303,7 @@ sub current_commit_id
 }
 
 
-=method write_file($path, $data)
+=method write_and_check($path, $data)
 
 This method writes the data scalar to the repository under specified
 file name. It returns true if the data differs from the previous version
@@ -313,13 +313,13 @@ to scalar.
 
 =cut
 
-sub write_file
+sub write_and_check
 {
     my $self = shift;
     my $filename = shift;
     my $data = shift;
 
-    croak('write_file() is called for a read-only ObjectStore object')
+    croak('write_and_check() is called for a read-only ObjectStore object')
         unless $self->{'writer'};
 
     my $prev_blob_id = '';
@@ -334,15 +334,15 @@ sub write_file
 }
 
 
-=method write_file_nocheck($path, $data)
+=method write_file($path, $data)
 
-This method is similar to C<write_file>, but it does not compare the
-content revisions. It is useful for massive write operations where speed
-is important.
+This method is similar to C<write_and_check>, but it does not compare
+the content revisions. It is useful for massive write operations where
+speed is important.
 
 =cut
 
-sub write_file_nocheck
+sub write_file
 {
     my $self = shift;
     my $filename = shift;
