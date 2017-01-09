@@ -187,7 +187,7 @@ my $cb_deleted2 = sub {
     my ($path) = @_;
     $file_deleted{$path} = 1;
 };
-$reader->read_updates($old_commit_id, $cb_updated2, $cb_deleted2);
+$reader->read_updates($old_commit_id, $cb_updated2, $cb_deleted2, 1);
 
 cmp_ok(scalar(keys %file_updated), '==', 3, 'read_updates: 3 files updated');
 cmp_ok(scalar(keys %file_deleted), '==', 2, 'read_updates: 2 files deleted');
