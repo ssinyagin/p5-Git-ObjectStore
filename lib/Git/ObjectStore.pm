@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Git::Raw;
+use Git::Raw::Object;
 use Carp;
 use File::Spec::Functions qw(catfile);
 
@@ -475,12 +476,14 @@ sub create_commit_and_packfile
 }
 
 
-=method recursive_read($path, $callback)
+=method recursive_read($path, $callback, $no_content)
 
 This method is only supported in reader mode. It reads the directories
 recursively and calls the callback for every file it finds. The callback
 arguments are the file name and scalar content. If called with string as
-path, all files in the branch are traversed.
+path, all files in the branch are traversed. If the third argument is a
+true value, the method does not read the object contents, and the
+callback is only called with one argument.
 
 =cut
 
@@ -489,19 +492,21 @@ sub recursive_read
     my $self = shift;
     my $path = shift;
     my $callback = shift;
-
+    my $no_content = shift;
+    
     croak('recursive_read() is called for a read-write ObjectStore object')
         if $self->{'writer'};
 
     if( $path eq '' )
     {
         foreach my $entry ($self->{'gittree'}->entries()) {
-            $self->_do_recursive_read($entry, $entry->name(), $callback);
+            $self->_do_recursive_read
+                ($entry, $entry->name(), $callback, $no_content);
         }
     } else {
         my $entry = $self->{'gittree'}->entry_bypath($path);
         if( defined($entry) ) {
-            $self->_do_recursive_read($entry, $path, $callback);
+            $self->_do_recursive_read($entry, $path, $callback, $no_content);
         }
         else
         {
@@ -518,21 +523,28 @@ sub _do_recursive_read
     my $entry = shift;  # Git::Raw::Tree::Entry object
     my $path = shift;
     my $callback = shift;
+    my $no_content = shift;
 
-    my $obj = $entry->object();
+    $entry->type();
 
-    if( $obj->is_tree() ) {
+    if( $entry->type() == Git::Raw::Object->TREE ) {
         # this is a subtree, we read it recursively
-        foreach my $child_entry ($obj->entries()) {
+        foreach my $child_entry ($entry->object()->entries()) {
             $self->_do_recursive_read
                 ($child_entry, $path . '/' . $child_entry->name(), $callback);
         }
     } else {
-        &{$callback}($path, $obj->content());
+        if( $no_content ) {
+            &{$callback}($path);
+        } else {
+            &{$callback}($path, $entry->object()->content());
+        }
     }
 
     return;
 }
+
+
 
 
 =method read_updates($old_commit_id, $callback_updated,

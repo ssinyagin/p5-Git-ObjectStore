@@ -155,7 +155,51 @@ foreach my $file ('xx2/xy2', 'aaa') {
     ok($file_deleted{$file}, 'read_updates reports deleted file: ' . $file);
 }
 
+# no_content reading
+my %read3;
+my $cb_read3 = sub {
+    my ($path) = @_;
+    $read3{$path} = 1;
+};
+$reader->recursive_read('', $cb_read3);
+cmp_ok(scalar(keys %read3), '==', 4, 'recursive_read returned 4 entries');
+while(my ($file, $data) = each %more_data2 ) {
+    cmp_ok($read3{$file}, '==', 1,
+           'recursive_read found ' . $file);
+}
 
+%read3 = ();
+$reader->recursive_read('bbb', $cb_read3);
+cmp_ok(scalar(keys %read3), '==', 1, 'recursive_read returned 1 entry');
+cmp_ok($read3{'bbb/bb/bbb/bb'}, '==', 1,
+       'recursive_read returned a correct entry');
+
+
+# no_content updates
+
+%file_updated = ();
+%file_deleted = ();
+my $cb_updated2 = sub {
+    my ($path) = @_;
+    $file_updated{$path} = 1;
+};
+my $cb_deleted2 = sub {
+    my ($path) = @_;
+    $file_deleted{$path} = 1;
+};
+$reader->read_updates($old_commit_id, $cb_updated2, $cb_deleted2);
+
+cmp_ok(scalar(keys %file_updated), '==', 3, 'read_updates: 3 files updated');
+cmp_ok(scalar(keys %file_deleted), '==', 2, 'read_updates: 2 files deleted');
+
+while(my ($file, $data) = each %more_data2 ) {
+    cmp_ok($file_updated{$file}, '==', 1,
+           'read_updates returns an entry for ' . $file);
+}
+
+foreach my $file ('xx2/xy2', 'aaa') {
+    ok($file_deleted{$file}, 'read_updates reports deleted file: ' . $file);
+}
 
 
 done_testing;
