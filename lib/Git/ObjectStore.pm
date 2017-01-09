@@ -535,13 +535,16 @@ sub _do_recursive_read
 }
 
 
-=method read_updates($old_commit_id, $callback_updated, $callback_deleted)
+=method read_updates($old_commit_id, $callback_updated,
+$callback_deleted, $no_content)
 
 This method is only supported in reader mode. It compares the current
 commit with the old commit, and executes the first callback for all
 added or updated files, and the second callback for all deleted
 files. The first callback gets the file name and scalar content as
-arguments, and the second callback gets only the file name.
+arguments, and the second callback gets only the file name. If the
+fourth argument is true, the update callback is called only with rhe
+file name.
 
 =cut
 
@@ -551,6 +554,7 @@ sub read_updates
     my $old_commit_id = shift;
     my $cb_updated = shift;
     my $cb_deleted = shift;
+    my $no_content = shift;
 
     my $old_commit = Git::Raw::Commit->lookup($self->{'repo'}, $old_commit_id);
     croak("Cannot lookup commit $old_commit_id") unless defined($old_commit);
@@ -576,8 +580,12 @@ sub read_updates
         if( $delta->status() eq 'deleted') {
             &{$cb_deleted}($path);
         } else {
-            my $entry = $new_tree->entry_bypath($path);
-            &{$cb_updated}($path, $entry->object()->content());
+            if( $no_content ) {
+                &{$cb_updated}($path);
+            } else {
+                my $entry = $new_tree->entry_bypath($path);
+                &{$cb_updated}($path, $entry->object()->content());
+            }
         }
     }
 
