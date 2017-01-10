@@ -274,7 +274,8 @@ sub read_file
 
 =method file_exists($path)
 
-This method returns true if the given file extsis in the branch.
+This method returns true if the given file extsis in the branch. In
+reader mode, it also returns true if path is a directory name.
 
 =cut
 
