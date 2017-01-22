@@ -76,9 +76,9 @@ filesystem and exhausting its inode pool.
 =method new(%args)
 
 Creates a new object. If F<repodir> is empty or does not exist, the
-method initializes a new bare Git repository. If multiple processes may
-call this method simultaneously, it is up to you to provide locking, so
-that the objects are created one at a time.
+method (in writer mode only) initializes a new bare Git repository. If
+multiple processes may call this method simultaneously, it is up to you
+to provide locking and prevent the race condition.
 
 Mandatory arguments:
 
@@ -132,7 +132,11 @@ sub new
     my $repodir = $self->{'repodir'};
 
     if ( not -e $repodir . '/config' ) {
-        Git::Raw::Repository->init($repodir, 1);
+        if( $self->{'writer'} ) {
+            Git::Raw::Repository->init($repodir, 1);
+        } else {
+            croak($repodir . ' does not contain a bare Git repository');
+        }
     }
 
     my $repo = $self->{'repo'} = Git::Raw::Repository->open($repodir);
