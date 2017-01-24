@@ -140,11 +140,19 @@ sub new
     }
 
     my $repo = $self->{'repo'} = Git::Raw::Repository->open($repodir);
+    my $objdir = catfile($repodir, 'objects');
+
+    # We do not use loose backend, so we explicitly exclude it from ODB.
+    {
+        my $odb = Git::Raw::Odb->new();
+        $odb->add_backend(Git::Raw::Odb::Backend::Pack->new($objdir), 10);
+        $repo->odb($odb);
+    }
 
     if ( $self->{'writer'} ) {
 
         # in-memory store that will write a single pack file for all objects
-        $self->{'packdir'} = catfile($repodir, 'objects', 'pack');
+        $self->{'packdir'} = catfile($objdir, 'pack');
         my $mempack = $self->{'mempack'} = Git::Raw::Mempack->new;
         $repo->odb->add_backend($mempack, 99);
 
