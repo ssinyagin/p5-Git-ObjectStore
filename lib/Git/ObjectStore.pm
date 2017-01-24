@@ -143,6 +143,11 @@ sub new
 
     if ( $self->{'writer'} ) {
 
+        # in-memory store that will write a single pack file for all objects
+        $self->{'packdir'} = catfile($repodir, 'objects', 'pack');
+        my $mempack = $self->{'mempack'} = Git::Raw::Mempack->new;
+        $repo->odb->add_backend($mempack, 99);
+
         my $branch = Git::Raw::Branch->lookup($repo, $branchname, 1);
 
         if ( not defined($branch) ) {
@@ -158,11 +163,6 @@ sub new
         }
 
         croak('expected a branch') unless defined($branch);
-
-        # in-memory store that will write a single pack file for all objects
-        $self->{'packdir'} = catfile($repodir, 'objects', 'pack');
-        my $mempack = $self->{'mempack'} = Git::Raw::Mempack->new;
-        $repo->odb->add_backend($mempack, 99);
 
         # in-memory index for preparing a commit
         my $index = Git::Raw::Index->new();
@@ -463,7 +463,9 @@ sub write_packfile
 
 This method combines C<create_commit()> and C<write_packfile>. The
 packfile is only written if there is a change in the content. The method
-returns true if any changes were detected.
+returns true if any changes were detected. If it's a new branch and it
+only contains the empty initial commit, a packfile is written and the
+method returns false.
 
 =cut
 
@@ -475,6 +477,8 @@ sub create_commit_and_packfile
     if( $self->create_commit($msg) ) {
         $self->write_packfile();
         return 1;
+    } elsif ( defined($self->{'created_init_commit'}) ) {
+        $self->write_packfile();
     }
 
     return 0;
