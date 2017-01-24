@@ -199,6 +199,15 @@ sub new
         $self->{'current_commit_id'} = $commit->id();
     }
 
+    # libgit2 sets GIT_LOOSE_PRIORITY=2 and GIT_PACKED_PRIORITY=1
+    # We want the packs to be read first for better performance
+    # So we add one more pack ODB with higher priority
+    {
+        my $objdir = catfile($repodir, 'objects');
+        my $backend = Git::Raw::Odb::Backend::Pack->new($objdir);
+        $repo->odb->add_backend($backend, 50);
+    }
+    
     return $self;
 }
 
