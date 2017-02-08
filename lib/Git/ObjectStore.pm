@@ -151,6 +151,8 @@ sub new
 
     if ( $self->{'writer'} ) {
 
+        my $refname = 'refs/heads/' . $branchname;
+
         # in-memory store that will write a single pack file for all objects
         $self->{'packdir'} = catfile($objdir, 'pack');
         my $mempack = $self->{'mempack'} = Git::Raw::Mempack->new;
@@ -158,12 +160,23 @@ sub new
 
         my $branch = Git::Raw::Branch->lookup($repo, $branchname, 1);
 
+        if( defined($branch) )
+        {
+            # If previous run of the writer crashed, we have a reference that
+            # points to nonexistent commit, because mempack was not written.
+            eval { $branch->peel('commit') };
+            if( $@ )
+            {
+                $branch = undef;
+                Git::Raw::Reference->lookup($refname, $repo)->delete();
+            }
+        }
+        
         if ( not defined($branch) ) {
             # This is a fresh repo, create the branch
             my $builder = Git::Raw::Tree::Builder->new($repo);
             my $tree = $builder->write();
             my $me = $self->_signature();
-            my $refname = 'refs/heads/' . $branchname;
             my $commit = $repo->commit("Initial empty commit in $branchname",
                                        $me, $me, [], $tree, $refname);
             $self->{'created_init_commit'} = $commit;
