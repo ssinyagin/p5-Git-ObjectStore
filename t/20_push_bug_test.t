@@ -43,6 +43,8 @@ ok(0 == system('git push'), 'git push');
 
 $writer = undef;
 
+ok(0 == system('cd ' . $repodirname . ' && git gc --aggressive'), 'git gc');
+
 my $reader = new Git::ObjectStore('repodir' => $repodirname,
                                   'branchname' => 'test1');
 
