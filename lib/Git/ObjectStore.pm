@@ -71,6 +71,12 @@ object store. The objects are written into a mempack, and then flushed
 to disk, so thousands of objects can be created without polluting your
 filesystem and exhausting its inode pool.
 
+The module disables the loose ODB explicitly. That means, it cannot read
+unpacked objects from the repository. So, if some other program is
+pushing its updates into the same branches, you need to make sure that
+loose objects are packed afterwards (C<git gc --aggressive> can be run
+in the ObjectStore repository).
+
 =cut
 
 =method new(%args)
